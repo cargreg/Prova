@@ -1,6 +1,8 @@
 ---
 - hosts: all
   become: true
+  remote_user: root
+  
   vars:
     zabbix_server_url: "http://192.168.100.150/zabbix/"
     zabbix_server_rest: "{{zabbix_server_url}}/api_jsonrpc.php"
