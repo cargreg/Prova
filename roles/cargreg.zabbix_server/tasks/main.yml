@@ -1,6 +1,5 @@
 ---
 # tasks file for cargreg.zabbix_server
-
 - name: Create host groups
   local_action:
     module: zabbix_group
@@ -10,8 +9,8 @@
     state: present
     host_groups: "{{ zabbix_groups }}"
   with_items: "{{ zabbix_groups }}"
-  when: "{{ create_group }}"
   become: false
+  when: create_group
 
 
 - name: Create a new host or update an existing host's info
@@ -32,8 +31,8 @@
         ip: "{{ ansible_default_ipv4.address }}"
         dns: "{{ zabbix_server_dns }}"
         port: "{{ zabbix_agent_listen_port }}"
-  when: "{{ create_user }}"
   become: false
+  when: create_user
 # - name: Get Key ??????????????????????????????????????????????????????????
 
 # - name: Get hostname
@@ -53,7 +52,7 @@
     headers:
       Content-Type: "application/json"
   register: data
-  when: "{{ create_user }}" 
+  when: create_user
     # "msg": " {u'status': 200, 
     # u'content_length': u'69', 
     # u'cookies': {}, 
@@ -83,11 +82,11 @@
     headers:
       Content-Type: "application/json"
   register: id
-  when: "{{ create_user }}"
-
+  when: create_user
+ 
 - debug:
     msg: "{{ id.json.result[0].hostid }}"
-  when: "{{ create_user }}"
+  when: create_user
 # {
 # "jsonrpc": "2.0",
 # "result": "61dc5d47ca4b62aedcdfb17c2a0d50d7",
@@ -103,7 +102,7 @@
     headers:
       Content-Type: "application/json"
   register: update
-  when: "{{ create_user }}"
+  when: create_user
 #  {
 #   "method": "host.update",
 #   "params": {

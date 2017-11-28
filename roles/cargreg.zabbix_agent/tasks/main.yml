@@ -104,21 +104,21 @@
     path: /etc/zabbix/zabbix_agentd.d
     state: directory
     mode: 0644
-  when: "{{zabbix_template_disk}}"
+  when: "zabbix_template_disk == true"
 
 - name: Install Disk Monitoring copy userparameter_diskstats.conf in /etc/zabbix/zabbix_agentd.d/
   copy:
     src: userparameter_diskstats.conf
     dest: /etc/zabbix/zabbix_agentd.d/userparameter_diskstats.conf
     mode: 0644
-  when: "{{zabbix_template_disk}}"
+  when: "zabbix_template_disk == true"
 
 - name: Install Disk Monitoring copy lld-disk.py in /usr/local/bin
   copy:
     src: lld-disks.py
     dest: /usr/local/bin/lld-disk.py
     mode: 0751
-  when: "{{zabbix_template_disk}}"
+  when: "zabbix_template_disk == true"
 
 - name: Configure Mysql Template Install Python Mysql module
   package:

@@ -22,5 +22,5 @@ zabbix_tls_accept_api: "2"         # x incoming connection unencrypted 1 - (defa
 zabbix_TLSPSKIdentity: "ChiaveProva"
 zabbix_psk_key: ""
 
-create_group: true
-create_user: true
+create_group: false
+create_user: false
