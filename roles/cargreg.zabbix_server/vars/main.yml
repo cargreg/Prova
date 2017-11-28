@@ -1,0 +1,26 @@
+---
+# vars file for cargreg.zabbix
+zabbix_server_url: "http://192.168.100.150/zabbix/"
+zabbix_server_rest: "{{zabbix_server_url}}/api_jsonrpc.php"
+zabbix_server_user: "Admin"
+zabbix_server_pass: "zabbix"
+zabbix_server_port: 10051
+zabbix_server_dns: ""
+
+zabbix_user_group: "Gruppo Ubuntu"
+zabbix_groups: ['{{zabbix_user_group}}']  #fruits: ['Apple', 'Orange', 'Strawberry', 'Mango']
+
+zabbix_user_template: "Template OS Linux"
+zabbix_template: ['{{zabbix_user_template }}','Template App MySQL','Template Disk Performance']
+
+zabbix_user_status: "enabled"    #enabled | disabled
+zabbix_user_state: "present"    #present | absent
+
+zabbix_tls_connect_api: "2"         #1 - (default) No encryption;2 - PSK;4 - certificate.     # unencrypted | cert | psk
+zabbix_tls_accept_api: "2"         # x incoming connection unencrypted 1 - (default) No encryption;2 - PSK;4 - certificate. 
+
+zabbix_TLSPSKIdentity: "ChiaveProva"
+zabbix_psk_key: ""
+
+create_group: true
+create_user: true

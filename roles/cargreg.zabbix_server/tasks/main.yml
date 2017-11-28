@@ -1,0 +1,152 @@
+---
+# tasks file for cargreg.zabbix_server
+
+- name: Create host groups
+  local_action:
+    module: zabbix_group
+    server_url: "{{ zabbix_server_url }}"
+    login_user: "{{ zabbix_server_user }}"
+    login_password: "{{ zabbix_server_pass }}"
+    state: present
+    host_groups: "{{ zabbix_groups }}"
+  with_items: "{{ zabbix_groups }}"
+  when: "{{ create_group }}"
+  become: false
+
+
+- name: Create a new host or update an existing host's info
+  local_action:
+    module: zabbix_host
+    server_url: "{{ zabbix_server_url }}"
+    login_user: "{{ zabbix_server_user }}"
+    login_password: "{{ zabbix_server_pass }}"
+    host_name: "{{ ansible_hostname }}"
+    host_groups: "{{ zabbix_groups }}"
+    link_templates: "{{ zabbix_template }}"
+    status: "{{ zabbix_user_status }}"
+    state: "{{ zabbix_user_state }}"
+    interfaces:
+      - type: 1
+        main: 1
+        useip: 1
+        ip: "{{ ansible_default_ipv4.address }}"
+        dns: "{{ zabbix_server_dns }}"
+        port: "{{ zabbix_agent_listen_port }}"
+  when: "{{ create_user }}"
+  become: false
+# - name: Get Key ??????????????????????????????????????????????????????????
+
+# - name: Get hostname
+#   shell: echo $HOSTNAME
+#   register: hostname
+
+# http://192.168.100.150/zabbix/api_jsonrpc.php
+#POST
+
+- name: Get Auth Token
+  uri:
+    url: '{{ zabbix_server_rest }}'
+    method: POST
+    body: {"jsonrpc": "2.0","method": "user.login","params": {"user": "Admin","password": "zabbix"},"id":""}
+    
+    body_format: json
+    headers:
+      Content-Type: "application/json"
+  register: data
+  when: "{{ create_user }}" 
+    # "msg": " {u'status': 200, 
+    # u'content_length': u'69', 
+    # u'cookies': {}, 
+    # u'changed': False, 
+    # u'access_control_allow_headers': u'Content-Type', 
+    # 'failed': False, 
+    # u'access_control_allow_methods': u'POST', 
+    # u'url': u'http://192.168.100.150/zabbix//api_jsonrpc.php', 
+    # u'x_powered_by': u'PHP/5.4.16', 
+    # u'connection': u'close', 
+    # u'server': u'Apache/2.4.6 (CentOS) PHP/5.4.16', u'msg': u'OK (69 bytes)', 
+    # u'json': {
+    #   u'jsonrpc': u'2.0', 
+    #   u'result': u'abe999d0a5c81406ca6a02a8719740e1', u'id': u''}, 
+    #   u'content_type': u'application/json', u'access_control_max_age': u'1000', u'date': u'Thu, 16 Nov 2017 15:31:05 GMT', u'redirected': False, 
+    #   u'access_control_allow_origin': u'*'} "
+
+#- debug:
+#    msg: " {{ data.json.result }} "
+
+- name: Get Host Id
+  uri:
+    url: "{{ zabbix_server_rest }}"
+    method: POST
+    body: '{"jsonrpc": "2.0","method": "host.get","params": {"filter": {"ip":"{{ ansible_default_ipv4.address }}" }},"auth": "{{ data.json.result }}","id":1}'
+    body_format: json
+    headers:
+      Content-Type: "application/json"
+  register: id
+  when: "{{ create_user }}"
+
+- debug:
+    msg: "{{ id.json.result[0].hostid }}"
+  when: "{{ create_user }}"
+# {
+# "jsonrpc": "2.0",
+# "result": "61dc5d47ca4b62aedcdfb17c2a0d50d7",
+# "id": ""
+# }
+
+- name: Add PSK to Host
+  uri:
+    url: "{{ zabbix_server_rest }}"
+    method: POST
+    body: {"method": "host.update","params": {"hostid": "{{ id.json.result[0].hostid }}","tls_connect": "{{ zabbix_tls_connect_api }}","tls_accept": "{{ zabbix_tls_accept_api }}","tls_psk_identity": "{{ zabbix_TLSPSKIdentity }}","tls_psk": "{{ zabbix_psk_key.stdout }}"},"auth": "{{ data.json.result }}","id": 1,"jsonrpc": "2.0"}
+    body_format: json
+    headers:
+      Content-Type: "application/json"
+  register: update
+  when: "{{ create_user }}"
+#  {
+#   "method": "host.update",
+#   "params": {
+#     "host": "{{ hostname.stdout }}",
+#     "hostid": 10851,
+#     "status": 1,
+#     "interfaces": [
+#       {
+#         "type": 1,
+#         "main": 1,
+#         "useip": 0,
+#         "ip": "0.0.0.0",
+#         "dns": "host-test",
+#         "port": "10050"
+#       }
+#     ],
+#     "groups": [
+#       {
+#         "groupid": 2
+#       },
+#       {
+#         "groupid": 34
+#       },
+#       {
+#         "groupid": 10
+#       }
+#     ],
+#     "templates": [
+#       {
+#         "templateid": 10228
+#       },
+#       {
+#         "templateid": 10001
+#       },
+#       {
+#         "templateid": 10287
+#       }
+#     ]
+#   },
+#   "auth": "57510d7f92fc1ccb60bc1eaad4735e5f",
+#   "id": 27796,
+#   "jsonrpc": "2.0"
+# }
+
+#- debug:
+#    msg: "{{ update }}"

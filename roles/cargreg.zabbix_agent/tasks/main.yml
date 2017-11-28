@@ -1,0 +1,185 @@
+---
+# tasks file for cargreg.zabbix
+
+- name: Install the repository configuration package
+  yum:
+    name: "{{ zabbix_release_centos }}"
+    state: present
+  when: ansible_distribution == "CentOS" or ansible_distribution == 'Red Hat Enterprise Linux'
+
+- name: Get the repository configuration package
+  get_url:
+    url: "{{ zabbix_release_ubuntu_14_04 }}"
+    dest: /tmp/zabbix
+    mode: 0777
+  when: ansible_distribution == "Ubuntu" and ansible_distribution_version < "16.04" and ansible_distribution_version >= "14.04"
+
+- name: Get the repository configuration package
+  get_url:
+    url: "{{ zabbix_release_ubuntu_16_04 }}"
+    dest: /tmp/zabbix
+    mode: 0777
+  when: ansible_distribution == "Ubuntu" and ansible_distribution_version == "16.04"
+
+- name: Install the repository configuration package
+  command: dpkg -i /tmp/zabbix
+  when: ansible_distribution == "Ubuntu"
+
+- name: Install the Zabbix agent
+  package:
+    name: zabbix-agent
+    state: latest
+
+- name: IPTables Persistence
+  package:
+    name: iptables-persistent
+    state: present
+  when: ansible_distribution == "Ubuntu"
+
+- name: Add Firewall Rule InComing
+  iptables:
+    chain: INPUT
+    source: '{{ zabbix_server }}'
+    protocol: tcp
+    destination_port: '{{ zabbix_agent_listen_port }}'
+    #destination: 127.0.0.1
+    jump: ACCEPT
+  when: ansible_distribution == "Ubuntu"
+
+- name: Add Firewall Rule OutComing
+  iptables:
+    chain: OUTPUT
+    source: '127.0.0.1'
+    protocol: tcp
+    destination_port: '{{ zabbix_server_port }}'
+    destination: '{{zabbix_server}}'
+    jump: ACCEPT
+  when: ansible_distribution == "Ubuntu"
+    
+- name: Save Firewall Rules
+  command: invoke-rc.d iptables-persistent save
+  when: ansible_distribution == "Ubuntu"
+
+- name: Add Firewall Rule
+  firewalld:
+    rich_rule: 'rule family="ipv4" source address="{{ zabbix_server }}" port port="{{ zabbix_agent_listen_port }}" protocol="tcp" accept' 
+    permanent: true 
+    state: enabled 
+    immediate: yes
+  when: ansible_distribution == "CentOS" or ansible_distribution == 'Red Hat Enterprise Linux'
+
+#- name: Generate a PSK
+#  command: sudo sh -c "openssl rand -hex 32 > /etc/zabbix/zabbix_agentd.psk"
+  
+#- name: Generate a PSK
+#  local_action: "command openssl rand -hex 32 > {{ playbook_dir }}/key"
+#  register: zabbix_psk_key
+
+- name: Generate a PSK
+  command: "openssl rand -hex 32"
+  register: zabbix_psk_key
+
+- name: Touch Key File
+  file:
+    path: /etc/zabbix/zabbix_agentd.psk
+    state: touch
+    mode: 0644
+
+- name: Write PSK to Host
+  #command: "echo {{ zabbix_psk_key.stdout }} > /etc/zabbix/zabbix_agentd.psk"
+  copy: 
+    content: "{{ zabbix_psk_key.stdout }}" 
+    dest: /etc/zabbix/zabbix_agentd.psk
+
+- name: Configure Zabbix
+  template: 
+    src=zabbix_agentd.conf.j2
+    dest=/etc/zabbix/zabbix_agentd.conf
+    owner=root
+    group=root
+    mode=0644
+  
+- name: Install Disk Monitoring mkdir /etc/zabbix/zabbix_agentd.d/
+  file:
+    path: /etc/zabbix/zabbix_agentd.d
+    state: directory
+    mode: 0644
+  when: "{{zabbix_template_disk}}"
+
+- name: Install Disk Monitoring copy userparameter_diskstats.conf in /etc/zabbix/zabbix_agentd.d/
+  copy:
+    src: userparameter_diskstats.conf
+    dest: /etc/zabbix/zabbix_agentd.d/userparameter_diskstats.conf
+    mode: 0644
+  when: "{{zabbix_template_disk}}"
+
+- name: Install Disk Monitoring copy lld-disk.py in /usr/local/bin
+  copy:
+    src: lld-disks.py
+    dest: /usr/local/bin/lld-disk.py
+    mode: 0751
+  when: "{{zabbix_template_disk}}"
+
+- name: Configure Mysql Template Install Python Mysql module
+  package:
+    name: python-mysqldb
+    state: present
+  when: "zabbix_template_mysql == true"
+
+- name: Copy user parameter file
+  copy:
+    src: userparameter_mysql.conf
+    dest: /etc/zabbix/zabbix_agentd.d/userparameter_mysql.conf
+    mode: 0751
+  when: "zabbix_template_mysql == true"
+
+- name: Configure Mysql Template create db user
+  mysql_user:
+    login_user: "{{ db_login_user }}"
+    login_password: "{{ db_login_pass }}"
+    name: "{{ zabbix_db_user }}"
+    password: "{{ zabbix_db_pass }}"
+    update_password: always
+    state: present
+    host: "{{ item }}"
+    priv: "*.*:All"
+  with_items:
+    - 'localhost'
+    - '127.0.0.1'
+  when: "zabbix_template_mysql == true"
+
+- name: Configure Mysql Template flush privileges
+  command: "mysql -u {{ db_login_user }} --password={{ db_login_pass }} -e 'flush privileges'"
+  when: "zabbix_template_mysql == true"
+
+# - name: Configure Mysql Template Create File /var/lib/zabbix/.my.cnf
+#   template:
+#     src=my.cnf.j2
+#     dest=/var/lib/zabbix/.my.cnf
+#     owner=root
+#     group=root
+#     mode=0644
+#   when: "{{ zabbix_template_mysql }}"
+
+- name: Configure Mysql Template Create File /etc/zabbix/.my.cnf
+  template:
+    src=my.cnf.j2
+    dest=/etc/zabbix/.my.cnf
+    owner=root
+    group=root
+    mode=0644
+  when: "zabbix_template_mysql == true"
+
+- name: Enable and Start Zabbix
+  service:
+    enabled: yes
+    name: zabbix-agent
+    state: started
+  when: ansible_distribution == "Ubuntu"
+  
+- name: Enable and Start Zabbix
+  systemd: 
+    state=started 
+    enabled=yes
+    name=zabbix-agent.service
+  when: ansible_distribution == "CentOS" or ansible_distribution == 'Red Hat Enterprise Linux'

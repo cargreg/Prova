@@ -1,0 +1,61 @@
+---
+- hosts: all
+  become: true
+  remote_user: root
+  
+  vars:
+    zabbix_server_url: "http://192.168.100.150/zabbix/"
+    zabbix_server_rest: "{{zabbix_server_url}}/api_jsonrpc.php"
+    zabbix_server_user: "Admin"
+    zabbix_server_pass: "zabbix"
+    zabbix_server_port: 10050
+    zabbix_server_dns: ""
+
+    zabbix_user_group: "Gruppo Ubuntu"
+    zabbix_groups: ['{{zabbix_user_group}}']  #fruits: ['Apple', 'Orange', 'Strawberry', 'Mango']
+
+    zabbix_user_template: "Template OS Linux"
+    zabbix_template: ['{{zabbix_user_template }}','Template App MySQL','Template Disk Performance']
+    
+    zabbix_user_status: "enabled"    #enabled | disabled
+    zabbix_user_state: "present"    #present | absent
+
+    zabbix_host_ip: 192.168.100.151
+
+    zabbix_template_disk: true    #true,false
+    zabbix_template_mysql: false   #true,false
+
+    zabbix_db_user: "zabbix"
+    zabbix_db_pass: "123456"
+
+    db_login_user: root
+    db_login_pass: "123456789"
+
+    #----Agent-Conf-File-------------------------------------
+    zabbix_agent_active_monitor: "no"   #yes|no
+
+    zabbix_server: "192.168.100.150"
+    zabbix_agent_listen_port: 10050
+
+    #---------Active-Monitor------------------------------------
+    zabbix_starts_agent: 0              #0 passivo ; >0 attivo opzionale
+    zabbix_server_active: ""            
+    zabbix_server_hostname: "Zabbix server"
+    #----------------------------------------------------
+    
+    zabbix_tls: "psk"             # unencrypted | cert | psk
+    zabbix_tls_accept: "psk"         # x incoming connection unencrypted | cert | psk
+    zabbix_TLSPSKIdentity: "ChiaveUbuntu"
+    zabbix_TLSPSKFile: "/etc/zabbix/zabbix_agentd.psk"
+    zabbix_psk_key: ""
+    
+    zabbix_tls_connect_api: "2"
+    zabbix_tls_accept_api: "2"
+
+
+    create_group: false
+    create_user: false
+
+  roles:
+    - role: cargreg.zabbix_agent
+    - role: cargreg.zabbix_server

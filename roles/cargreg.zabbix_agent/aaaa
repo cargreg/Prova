@@ -1,0 +1,52 @@
+iptables -I INPUT #-I — Inserisce una nuova regola
+-i eth0 #interfaccia di rete
+-s bad.host.ip #indirizzo sorgente
+-p tcp # Imposta il protocollo IP
+--dport 80 #Specifica la porta di destinazione del pacchetto
+-j ACCEPT #Saltare direttamente su di un target specificato 
+
+- name: IPTables Persistence
+  package:
+  	name: iptables-persistent
+  	state: present
+  when: ansible_distribution == "Ubuntu"
+
+- name: Add Firewall Rule
+  iptables:
+    chain: INPUT
+	source: {{ zabbix_server }}
+    protocol: tcp
+    destination_port: {{ zabbix_agent_listen_port }}
+    jump: ACCEPT
+   when: ansible_distribution == "Ubuntu"
+    
+- name: Save Firewall Rules
+  command: invoke-rc.d iptables-persistent save
+  when: ansible_distribution == "Ubuntu"
+
+  
+iptables -I INPUT -i eth0 -s 146..xxx.xxx.a1 -p tcp --dport 80 -j ACCEPT
+iptables -I INPUT -i eth0 -s 146..xxx.xxx.a2 -p tcp --dport 80 -j ACCEPT
+iptables -I INPUT -i eth0 -s 146..xxx.xxx.a3 -p tcp --dport 80 -j ACCEPT
+
+This puts the rules at the top of the table to ensure no other rules are hit before them. Alternatively you can use 'append' instead of 'insert' so the order matches how the rules will look in the table with the reject rule at the end.
+
+iptables -A INPUT -i eth0 -s 146..xxx.xxx.a1 -p tcp --dport 80 -j ACCEPT
+iptables -A INPUT -i eth0 -s 146..xxx.xxx.a2 -p tcp --dport 80 -j ACCEPT
+iptables -A INPUT -i eth0 -s 146..xxx.xxx.a3 -p tcp --dport 80 -j ACCEPT
+iptables -A INPUT -i eth0 -s bad.host.ip -p tcp --dport 80 -j REJECT
+
+
+
+
+
+
+
+
+
+
+
+
+
+ChiaveProva
+f6621a1b51882bcd0ab0ca761989eda1e980cd8d20b2849a84c336ffd7d48858
