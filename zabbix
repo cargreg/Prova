@@ -57,5 +57,5 @@
     create_user: false
 
   roles:
-    - role: cargreg.zabbix_agent
-    - role: cargreg.zabbix_server
+    - role: roles/cargreg.zabbix_agent
+    - role: roles/cargreg.zabbix_server
