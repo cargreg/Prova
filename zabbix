@@ -51,8 +51,8 @@
     zabbix_tls_accept_api: "2"
 
 
-    create_group: true
-    create_user: true
+    create_group: false
+    create_user: false
 
   roles:
     - role: cargreg.zabbix_agent
